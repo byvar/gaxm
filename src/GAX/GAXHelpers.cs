@@ -46,7 +46,7 @@ namespace gaxm
             // Create and open the output file
             using (var outputStream = File.Create(outputFilePath)) {
                 // Create a context
-                using (var wavContext = new Context(basePath)) {
+                using (var wavContext = new Context(basePath, log: false)) {
                     // Create a key
                     const string wavKey = "wav";
 
@@ -59,10 +59,12 @@ namespace gaxm
             }
         }
 
-        public static void ExportGAX(string basePath, string mainDirectory, string songDirectory, GAX2_Song song, ushort channels) {
+        public static void ExportGAX(string basePath, string mainDirectory, GAX2_Song song, ushort channels) {
+
+            Directory.CreateDirectory(mainDirectory); 
             for (int i = 0; i < song.Samples.Length; i++) {
                 var e = song.Samples[i];
-                string outPath = Path.Combine(mainDirectory, songDirectory, "Samples");
+                string outPath = Path.Combine(mainDirectory, "samples", $"{song.ParsedName} - {song.ParsedArtist}");
                 ExportSample(basePath, outPath, $"{i}_{e.SampleOffset.StringAbsoluteOffset}", e.Sample, 15769, channels);
             }
             var h = song;
@@ -80,8 +82,9 @@ namespace gaxm
             // Create and open the output file
             using (var outputStream = File.Create(outputFilePath)) {
                 // Create a context
-                using (var xmContext = new Context(basePath)) {
-                    xmContext.Log.OverrideLogPath = Path.Combine(mainDirectory, "xm", $"{h.ParsedName}.txt");
+                using (var xmContext = new Context(basePath, log: Settings.XMLog)) {
+                    if(Settings.XMLog) Directory.CreateDirectory(Settings.XMLogDirectory);
+                    xmContext.Log.OverrideLogPath = Path.Combine(Settings.XMLogDirectory, $"{h.ParsedName}.txt");
                     // Create a key
                     string xmKey = $"{h.ParsedName}.xm";
 

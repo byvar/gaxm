@@ -9,11 +9,11 @@ namespace gaxm
 {
     public class GAX2_XMWriter {
 
-        private gaxm.Context.ConsoleLog Debug = new Context.ConsoleLog();
+        private readonly Context.ConsoleLog Debug = Settings.Verbose ? new Context.ConsoleLog() : null;
 
         public XM ConvertToXM(GAX2_Song song) {
             XM xm = new XM();
-            Debug.Log($"Exporting song: {song.ParsedName}");
+            Debug?.Log($"Exporting song: {song.ParsedName}");
             xm.ModuleName = song.ParsedName;
             xm.Instruments = song.InstrumentIndices.Select((s,i) => GetInstrument(song,i)).ToArray();
             xm.NumInstruments = (ushort)xm.Instruments.Length;
@@ -47,22 +47,24 @@ namespace gaxm
             int ind = song.InstrumentIndices[index];
             var gax_instr = song.InstrumentSet[ind].Value;
 
-            // Create instrument
-            XM_Instrument instr = new XM_Instrument();
-            instr.InstrumentName = "Instrument " + ind;
+			// Create instrument
+			XM_Instrument instr = new XM_Instrument {
+				InstrumentName = "Instrument " + ind
+			};
 
-            GetInstrument_ConfigureEnvelope(gax_instr, instr);
+			GetInstrument_ConfigureEnvelope(gax_instr, instr);
 
             // Create samples
             var gax_keymap = gax_instr.Rows[0];
             var gax_sampleIndex = gax_keymap.SampleIndex > 0 ? gax_keymap.SampleIndex - 1 : 0;
             var gax_smp = gax_instr.Samples[gax_sampleIndex];
 
-            XM_Sample smp = new XM_Sample();
-            smp.SampleName = "Sample " + gax_instr.SampleIndices[gax_sampleIndex];
-            smp.SampleData16 = ConvertSample(song.Samples[index].Sample);
-            smp.Type = 1 << 4; // 16 bit sample data
-            smp.SampleLength = (uint)smp.SampleData16.Length * 2;
+			XM_Sample smp = new XM_Sample {
+				SampleName = "Sample " + gax_instr.SampleIndices[gax_sampleIndex],
+				SampleData16 = ConvertSample(song.Samples[index].Sample),
+				Type = 1 << 4 // 16 bit sample data
+			};
+			smp.SampleLength = (uint)smp.SampleData16.Length * 2;
 
             // If loop
             bool loop = gax_smp.LoopStart != 0 || gax_smp.LoopEnd != 0;
@@ -78,7 +80,7 @@ namespace gaxm
                 instrPitch - 1 // GAX notes start at 1
                 + (relNote - 2);
 
-            Debug.Log($"(Instrument {ind}) Sample:{gax_instr.SampleIndices[gax_sampleIndex]}" +
+            Debug?.Log($"(Instrument {ind}) Sample:{gax_instr.SampleIndices[gax_sampleIndex]}" +
                 $" - Pitch:{gax_smp.Pitch}" +
                 $" - Relative Note Number:{relativeNoteNumber}" +
                 $" - Cfg1:{gax_keymap.DontUseNotePitch}" +
@@ -198,10 +200,11 @@ namespace gaxm
         }
 
         private XM_Pattern GetPattern(GAX2_Song song, int index) {
-            XM_Pattern pat = new XM_Pattern();
-            pat.NumChannels = song.NumChannels;
-            pat.NumRows = song.NumRowsPerPattern;
-            XM_PatternRow[] rows = Enumerable.Range(0, song.NumChannels).SelectMany(c => GetPatternRows(song, index, c, song.NumRowsPerPattern)).ToArray();
+			XM_Pattern pat = new XM_Pattern {
+				NumChannels = song.NumChannels,
+				NumRows = song.NumRowsPerPattern
+			};
+			XM_PatternRow[] rows = Enumerable.Range(0, song.NumChannels).SelectMany(c => GetPatternRows(song, index, c, song.NumRowsPerPattern)).ToArray();
             pat.PatternRows = new XM_PatternRow[rows.Length];
             for (int row = 0; row < song.NumRowsPerPattern; row++) {
                 for (int ch = 0; ch < song.NumChannels; ch++) {
@@ -218,25 +221,19 @@ namespace gaxm
             GAX2_Pattern gax = song.Patterns[channelIndex][patternIndex];
             XM_PatternRow[] rows = new XM_PatternRow[numRows];
             int curRow = 0;
-            byte? vol = null;
-            byte? eff = null;
-            byte? effParam = null;
-            byte? note = null;
-            byte? instrument = null;
-            int lastInstr = 0;
-            if (gax.IsEmptyTrack) {
+			if (gax.IsEmptyTrack) {
                 while (curRow < rows.Length) {
                     rows[curRow++] = new XM_PatternRow();
                 }
                 return rows;
             }
             foreach (var row in gax.Rows) {
-                eff = null;
-                effParam = null;
-                vol = null;
-                note = null;
-                instrument = null;
-                bool noteOff = false;
+				byte? eff = null;
+				byte? effParam = null;
+				byte? vol = null;
+				byte? note = null;
+				byte? instrument = null;
+				bool noteOff = false;
 
                 void ConfigureEffect() {
                     /*eff = (row.Effect < 16 && row.Effect != 12) ? (byte?)row.Effect : null;
@@ -263,12 +260,12 @@ namespace gaxm
                             var param = (param1 + param2) / 2;
                             eff = 15;
                             effParam = (byte)param;
-                            Debug.Log($"{row.Offset}: Effect {row.Effect} was used, incorrect speed!");
+                            Debug?.Log($"{row.Offset}: Effect {row.Effect} was used, incorrect speed!");
                             break;
                         case GAX2_PatternRow.EffectType.VolumeSlideUp:
                         case GAX2_PatternRow.EffectType.VolumeSlideDown:
                             if (row.EffectParameter >= 0x10) {
-                                Debug.LogWarning($"{row.Offset}: Effect {row.Effect} was used with param {row.EffectParameter} >= 0x10!");
+                                Debug?.LogWarning($"{row.Offset}: Effect {row.Effect} was used with param {row.EffectParameter} >= 0x10!");
                             } else {
                                 eff = 10;
                                 if (row.Effect == GAX2_PatternRow.EffectType.VolumeSlideUp) {
@@ -294,7 +291,7 @@ namespace gaxm
                                 eff = 14;
                                 effParam = row.EffectParameter;
                             } else {
-                                Debug.LogWarning($"{row.Offset}: Effect 0xE{topBits:X1}x was used!");
+                                Debug?.LogWarning($"{row.Offset}: Effect 0xE{topBits:X1}x was used!");
                             }
                             break;
                         case GAX2_PatternRow.EffectType.SetSpeed:
@@ -302,11 +299,11 @@ namespace gaxm
                                 eff = 15;
                                 effParam = row.EffectParameter;
                             } else {
-                                Debug.LogWarning($"{row.Offset}: Effect {row.Effect} was used with param {row.EffectParameter} >= 0x20!");
+                                Debug?.LogWarning($"{row.Offset}: Effect {row.Effect} was used with param {row.EffectParameter} >= 0x20!");
                             }
                             break;
                         default:
-                            Debug.LogWarning($"{row.Offset}: Unknown effect {row.Effect} was used!");
+                            Debug?.LogWarning($"{row.Offset}: Unknown effect {row.Effect} was used!");
                             break;
 
                     }
@@ -316,8 +313,7 @@ namespace gaxm
                     if (row.Note != 1) {
                         if (row.Note != 0) note = row.Note;
                         instrument = (byte)(1 + Array.IndexOf(song.InstrumentIndices, row.Instrument));
-                        lastInstr = instrument.Value;
-                        var gax_instr = song.InstrumentSet[row.Instrument].Value;
+						var gax_instr = song.InstrumentSet[row.Instrument].Value;
                         if (gax_instr.Rows[0].DontUseNotePitch) note = (byte)gax_instr.Rows[0].RelativeNoteNumber;
                     } else {
                         // Note off

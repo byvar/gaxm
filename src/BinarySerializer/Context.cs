@@ -7,19 +7,19 @@ using ILogger = BinarySerializer.ILogger;
 
 namespace gaxm {
     public class Context : BinarySerializer.Context {
-        public Context(string basePath, bool log = true) : base(
+        public Context(string basePath, bool log, bool verbose = true) : base(
             basePath: basePath, // Pass in the base path
             settings: new SerializerSettings(), // Pass in the settings
             serializerLog: log ? new SerializerLog() : null, // Use serializer log for logging to a file
             fileManager: null,
-            logger: new ConsoleLog()) // Use console log
+            logger: verbose ? new ConsoleLog() : null) // Use console log
         {}
 
         public class SerializerSettings : ISerializerSettings {
             /// <summary>
             /// The default string encoding to use when none is specified
             /// </summary>
-            public Encoding DefaultStringEncoding => Encoding.GetEncoding(437);
+            public Encoding DefaultStringEncoding => Encoding.GetEncoding(1252);
 
             /// <summary>
             /// Indicates if a backup file should be created when writing to a file
@@ -49,14 +49,14 @@ namespace gaxm {
         }
 
         public class SerializerLog : ISerializerLog {
-            public bool IsEnabled => gaxm.Settings.Log;
+            public bool IsEnabled => true;
 
             private StreamWriter _logWriter;
 
             protected StreamWriter LogWriter => _logWriter ??= GetFile();
 
             public string OverrideLogPath { get; set; }
-            public string LogFile => OverrideLogPath ?? gaxm.Settings.LogFile;
+            public string LogFile => OverrideLogPath;
             public int BufferSize => 0x8000000; // 1 GB
 
             public StreamWriter GetFile() {
