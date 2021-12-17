@@ -83,8 +83,10 @@ namespace gaxm
             using (var outputStream = File.Create(outputFilePath)) {
                 // Create a context
                 using (var xmContext = new Context(basePath, log: Settings.XMLog)) {
-                    if(Settings.XMLog) Directory.CreateDirectory(Settings.XMLogDirectory);
-                    xmContext.Log.OverrideLogPath = Path.Combine(Settings.XMLogDirectory, $"{h.ParsedName}.txt");
+                    if (Settings.XMLog) {
+                        Directory.CreateDirectory(Settings.XMLogDirectory);
+                        xmContext.Log.OverrideLogPath = Path.Combine(Settings.XMLogDirectory, $"{h.ParsedName}.txt");
+                    }
                     // Create a key
                     string xmKey = $"{h.ParsedName}.xm";
 

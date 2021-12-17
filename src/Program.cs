@@ -64,7 +64,7 @@ namespace gaxm {
 
                 // Scan ROM
                 uint curPtr = 0;
-                var len = s.CurrentLength - 0x200;
+                var len = s.CurrentLength - 200;
                 while (curPtr < len) {
                     s.DoAt(basePtr + curPtr, () => {
                         context.Cache.Structs.Clear();
@@ -128,7 +128,8 @@ namespace gaxm {
                     ProgressBarConvert.Refresh((int)((i / (float)songs.Count) * progressSize), $"Converting {i}/{songs.Count}: {song.Name}");
                     try {
                         GAXHelpers.ExportGAX(basePath, options.OutputDirectory, song, 2);
-                    } catch {
+                    } catch(Exception ex) {
+                        logger.LogError(ex.ToString());
                     }
                 }
                 ProgressBarConvert.Refresh(progressSize, $"Converting: Finished");

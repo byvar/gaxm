@@ -49,7 +49,7 @@ namespace gaxm {
         }
 
         public class SerializerLog : ISerializerLog {
-            public bool IsEnabled => true;
+            public bool IsEnabled => !string.IsNullOrEmpty(LogFile);
 
             private StreamWriter _logWriter;
 
