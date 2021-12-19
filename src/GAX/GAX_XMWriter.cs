@@ -7,19 +7,19 @@ using BinarySerializer.GBA.Audio.GAX;
 
 namespace gaxm
 {
-    public class GAX2_XMWriter {
+    public class GAX_XMWriter {
 
         private readonly Context.ConsoleLog Debug = Settings.Verbose ? new Context.ConsoleLog() : null;
 
-        public XM ConvertToXM(GAX2_Song song) {
+        public XM ConvertToXM(IGAX_Song song) {
             XM xm = new XM();
-            Debug?.Log($"Exporting song: {song.ParsedName}");
-            xm.ModuleName = song.ParsedName;
-            xm.Instruments = song.InstrumentIndices.Select((s,i) => GetInstrument(song,i)).ToArray();
+            Debug?.Log($"Exporting song: {song.Info.ParsedName}");
+            xm.ModuleName = song.Info.ParsedName;
+            xm.Instruments = song.Info.UsedInstrumentIndices.Select((s,i) => GetInstrument(song,i)).ToArray();
             xm.NumInstruments = (ushort)xm.Instruments.Length;
-            xm.NumChannels = song.NumChannels;
-            xm.NumPatterns = song.NumPatternsPerChannel;
-            xm.PatternOrderTable = Enumerable.Range(0,song.NumPatternsPerChannel).Select(i => (byte)i).ToArray();
+            xm.NumChannels = song.Info.NumChannels;
+            xm.NumPatterns = song.Info.NumPatternsPerChannel;
+            xm.PatternOrderTable = Enumerable.Range(0,song.Info.NumPatternsPerChannel).Select(i => (byte)i).ToArray();
             xm.SongLength = (ushort)xm.PatternOrderTable.Length;
             xm.DefaultTempo = 6;
             xm.DefaultBPM = 149;
@@ -30,7 +30,7 @@ namespace gaxm
                 xm.PatternOrderTable = patOrderTable;
             }
             xm.HeaderSize = (uint)(20 + xm.PatternOrderTable.Length);
-            xm.Patterns = Enumerable.Range(0, song.NumPatternsPerChannel).Select(i => GetPattern(song, i)).ToArray();
+            xm.Patterns = Enumerable.Range(0, song.Info.NumPatternsPerChannel).Select(i => GetPattern(song, i)).ToArray();
             return xm;
         }
         public short[] ConvertSample(byte[] sample) {
@@ -43,9 +43,9 @@ namespace gaxm
             }
             return delta;
         }
-        public XM_Instrument GetInstrument(GAX2_Song song, int index) {
-            int ind = song.InstrumentIndices[index];
-            var gax_instr = song.InstrumentSet[ind].Value;
+        public XM_Instrument GetInstrument(IGAX_Song song, int index) {
+            int ind = song.Info.UsedInstrumentIndices[index];
+            var gax_instr = song.Info.InstrumentSet[ind].Value;
 
 			// Create instrument
 			XM_Instrument instr = new XM_Instrument {
@@ -61,7 +61,7 @@ namespace gaxm
 
 			XM_Sample smp = new XM_Sample {
 				SampleName = "Sample " + gax_instr.SampleIndices[gax_sampleIndex],
-				SampleData16 = ConvertSample(song.Samples[index].Sample),
+				SampleData16 = ConvertSample(song.Info.Samples[index].Sample),
 				Type = 1 << 4 // 16 bit sample data
 			};
 			smp.SampleLength = (uint)smp.SampleData16.Length * 2;
@@ -75,10 +75,10 @@ namespace gaxm
                 smp.SampleLoopLength = (gax_smp.LoopEnd - gax_smp.LoopStart) * 2 - 2;
             }
             int instrPitch = (gax_smp.Pitch / 32);
-            int relNote = BitHelpers.ExtractBits(gax_keymap.RelativeNoteNumber, 6, 0);
+            int relNote = gax_keymap.RelativeNoteNumber;
             int relativeNoteNumber =
                 instrPitch - 1 // GAX notes start at 1
-                + (relNote - 2);
+                + (gax_instr.Rows[0].DontUseNotePitch ? 0 : (relNote - 2));
 
             Debug?.Log($"(Instrument {ind}) Sample:{gax_instr.SampleIndices[gax_sampleIndex]}" +
                 $" - Pitch:{gax_smp.Pitch}" +
@@ -99,14 +99,14 @@ namespace gaxm
             return instr;
         }
 
-        private void GetInstrument_ConfigureEnvelope(GAX2_Instrument gax_instr, XM_Instrument instr) {
+        private void GetInstrument_ConfigureEnvelope(GAX_Instrument gax_instr, XM_Instrument instr) {
             var env = gax_instr.Envelope.Value;
 
 
             float volumeFactor = 1f;
 
             // Try to find a "set volume" effect in this instrument's rows
-            var volEffect = gax_instr.Rows[0].Effects.FirstOrDefault(e => e.Type == GAX2_InstrumentRow.Effect.EffectType.SetVolume);
+            var volEffect = gax_instr.Rows[0].Effects.FirstOrDefault(e => e.Type == GAX_InstrumentRow.Effect.EffectType.SetVolume);
             if (volEffect != null) {
                 volumeFactor = volEffect.Parameter / 255f;
             }
@@ -157,7 +157,7 @@ namespace gaxm
         }
 
 
-        private void GetInstrument_ConfigureEnvelope2(GAX2_Instrument gax_instr, XM_Instrument instr) {
+        private void GetInstrument_ConfigureEnvelope2(GAX_Instrument gax_instr, XM_Instrument instr) {
             var env = gax_instr.Envelope.Value;
 
             Dictionary<int, byte> pointMapping = new Dictionary<int, byte>();
@@ -199,16 +199,16 @@ namespace gaxm
             }
         }
 
-        private XM_Pattern GetPattern(GAX2_Song song, int index) {
+        private XM_Pattern GetPattern(IGAX_Song song, int index) {
 			XM_Pattern pat = new XM_Pattern {
-				NumChannels = song.NumChannels,
-				NumRows = song.NumRowsPerPattern
+				NumChannels = song.Info.NumChannels,
+				NumRows = song.Info.NumRowsPerPattern
 			};
-			XM_PatternRow[] rows = Enumerable.Range(0, song.NumChannels).SelectMany(c => GetPatternRows(song, index, c, song.NumRowsPerPattern)).ToArray();
+			XM_PatternRow[] rows = Enumerable.Range(0, song.Info.NumChannels).SelectMany(c => GetPatternRows(song, index, c, song.Info.NumRowsPerPattern)).ToArray();
             pat.PatternRows = new XM_PatternRow[rows.Length];
-            for (int row = 0; row < song.NumRowsPerPattern; row++) {
-                for (int ch = 0; ch < song.NumChannels; ch++) {
-                    pat.PatternRows[row * song.NumChannels + ch] = rows[ch * song.NumRowsPerPattern + row];
+            for (int row = 0; row < song.Info.NumRowsPerPattern; row++) {
+                for (int ch = 0; ch < song.Info.NumChannels; ch++) {
+                    pat.PatternRows[row * song.Info.NumChannels + ch] = rows[ch * song.Info.NumRowsPerPattern + row];
                 }
             }
             // pat.PackedPatternDataSize = (ushort)(song.NumChannels * song.NumRowsPerPattern);
@@ -217,8 +217,10 @@ namespace gaxm
             return pat;
         }
 
-        private XM_PatternRow[] GetPatternRows(GAX2_Song song, int patternIndex, int channelIndex, int numRows) {
-            GAX2_Pattern gax = song.Patterns[channelIndex][patternIndex];
+        private XM_PatternRow[] GetPatternRows(IGAX_Song song, int patternIndex, int channelIndex, int numRows) {
+            GAX_Channel channel = song.GetChannel(channelIndex);
+            GAX_Pattern gax = channel?.Patterns[patternIndex];
+            GAX_PatternHeader header = channel?.PatternHeaders[patternIndex];
             XM_PatternRow[] rows = new XM_PatternRow[numRows];
             int curRow = 0;
 			if (gax.IsEmptyTrack) {
@@ -240,21 +242,21 @@ namespace gaxm
                     effParam = eff.HasValue ? (byte?)(row.EffectParameter) : null;
                     vol = (row.Effect == 12) ? (byte?)(0x10 + (row.EffectParameter >> 2)) : null;*/
                     switch (row.Effect) {
-                        case GAX2_PatternRow.EffectType.None:
+                        case GAX_PatternRow.EffectType.None:
                             break;
-                        case GAX2_PatternRow.EffectType.PortamentoUp: // TODO: Also the first tick
+                        case GAX_PatternRow.EffectType.PortamentoUp: // TODO: Also the first tick
                             eff = 1;
                             effParam = row.EffectParameter;
                             break;
-                        case GAX2_PatternRow.EffectType.PortamentoDown: // TODO: Also the first tick
+                        case GAX_PatternRow.EffectType.PortamentoDown: // TODO: Also the first tick
                             eff = 2;
                             effParam = row.EffectParameter;
                             break;
-                        case GAX2_PatternRow.EffectType.TonePortamento: // TODO: Also the first tick
+                        case GAX_PatternRow.EffectType.TonePortamento: // TODO: Also the first tick
                             eff = 3;
                             effParam = row.EffectParameter;
                             break;
-                        case GAX2_PatternRow.EffectType.SetSpeedModulate:
+                        case GAX_PatternRow.EffectType.SetSpeedModulate:
                             var param1 = BitHelpers.ExtractBits(row.EffectParameter, 4, 4);
                             var param2 = BitHelpers.ExtractBits(row.EffectParameter, 4, 0);
                             var param = (param1 + param2) / 2;
@@ -262,13 +264,13 @@ namespace gaxm
                             effParam = (byte)param;
                             Debug?.Log($"{row.Offset}: Effect {row.Effect} was used, incorrect speed!");
                             break;
-                        case GAX2_PatternRow.EffectType.VolumeSlideUp:
-                        case GAX2_PatternRow.EffectType.VolumeSlideDown:
+                        case GAX_PatternRow.EffectType.VolumeSlideUp:
+                        case GAX_PatternRow.EffectType.VolumeSlideDown:
                             if (row.EffectParameter >= 0x10) {
                                 Debug?.LogWarning($"{row.Offset}: Effect {row.Effect} was used with param {row.EffectParameter} >= 0x10!");
                             } else {
                                 eff = 10;
-                                if (row.Effect == GAX2_PatternRow.EffectType.VolumeSlideUp) {
+                                if (row.Effect == GAX_PatternRow.EffectType.VolumeSlideUp) {
                                     effParam = (byte)BitHelpers.SetBits(0, row.EffectParameter, 4, 4);
                                     vol = (byte)BitHelpers.SetBits(0x90, row.EffectParameter, 4, 0); // Fine volume up, in volume column
                                 } else {
@@ -277,15 +279,15 @@ namespace gaxm
                                 }
                             }
                             break;
-                        case GAX2_PatternRow.EffectType.SetVolume: // Set volume
+                        case GAX_PatternRow.EffectType.SetVolume: // Set volume
                             eff = 12;
                             effParam = (byte)(row.EffectParameter >> 2); // Volume ranges from 0-255 in GAX, and 0-64 in XM
                             break;
-                        case GAX2_PatternRow.EffectType.PatternBreak:
+                        case GAX_PatternRow.EffectType.PatternBreak:
                             eff = 13;
                             effParam = row.EffectParameter;
                             break;
-                        case GAX2_PatternRow.EffectType.NoteDelay:
+                        case GAX_PatternRow.EffectType.NoteDelay:
                             var topBits = BitHelpers.ExtractBits(row.EffectParameter, 4, 4);
                             if (topBits == 0xD) {
                                 eff = 14;
@@ -294,11 +296,13 @@ namespace gaxm
                                 Debug?.LogWarning($"{row.Offset}: Effect 0xE{topBits:X1}x was used!");
                             }
                             break;
-                        case GAX2_PatternRow.EffectType.SetSpeed:
+                        case GAX_PatternRow.EffectType.SetSpeed:
                             if (row.EffectParameter < 0x20) {
                                 eff = 15;
                                 effParam = row.EffectParameter;
                             } else {
+                                eff = 15;
+                                effParam = 0x1F;
                                 Debug?.LogWarning($"{row.Offset}: Effect {row.Effect} was used with param {row.EffectParameter} >= 0x20!");
                             }
                             break;
@@ -311,10 +315,15 @@ namespace gaxm
                 void ConfigureNote() {
 
                     if (row.Note != 1) {
-                        if (row.Note != 0) note = row.Note;
-                        instrument = (byte)(1 + Array.IndexOf(song.InstrumentIndices, row.Instrument));
-						var gax_instr = song.InstrumentSet[row.Instrument].Value;
-                        if (gax_instr.Rows[0].DontUseNotePitch) note = (byte)gax_instr.Rows[0].RelativeNoteNumber;
+                        instrument = (byte)(1 + Array.IndexOf(song.Info.UsedInstrumentIndices, row.Instrument));
+						var gax_instr = song.Info.InstrumentSet[row.Instrument].Value;
+                        if (gax_instr.Rows[0].DontUseNotePitch) {
+                            if (row.Note != 0) note = gax_instr.Rows[0].RelativeNoteNumber;
+                        } else {
+                            if (row.Note != 0) {
+                                note = (byte)(row.Note + header.Transpose);
+                            }
+                        }
                     } else {
                         // Note off
                         instrument = 0;
@@ -325,21 +334,21 @@ namespace gaxm
 
                 switch (row.Command) {
                     // TODO: correct these
-                    case GAX2_PatternRow.Cmd.Unknown:
+                    case GAX_PatternRow.Cmd.Unknown:
                         break;
-                    case GAX2_PatternRow.Cmd.EffectOnly:
+                    case GAX_PatternRow.Cmd.EffectOnly:
                         ConfigureEffect();
                         rows[curRow++] = new XM_PatternRow(volumeColumnByte: vol, effectType: eff, effectParameter: effParam);
                         break;
-                    case GAX2_PatternRow.Cmd.Rest:
+                    case GAX_PatternRow.Cmd.Rest:
                         rows[curRow++] = new XM_PatternRow();
                         break;
-                    case GAX2_PatternRow.Cmd.RestMulti:
+                    case GAX_PatternRow.Cmd.RestMulti:
                         for (int i = 0; i < row.RestDuration; i++) {
                             rows[curRow++] = new XM_PatternRow();
                         }
                         break;
-                    case GAX2_PatternRow.Cmd.Note:
+                    case GAX_PatternRow.Cmd.Note:
                         ConfigureEffect();
                         ConfigureNote();
                         if (noteOff) { // Note off
@@ -348,7 +357,7 @@ namespace gaxm
                             rows[curRow++] = new XM_PatternRow(note: note, instrument: instrument, volumeColumnByte: vol, effectType: eff, effectParameter: effParam);
                         }
                         break;
-                    case GAX2_PatternRow.Cmd.NoteOnly:
+                    case GAX_PatternRow.Cmd.NoteOnly:
                         ConfigureNote();
                         if (noteOff) { // Note off
                             rows[curRow++] = new XM_PatternRow(note: 97);

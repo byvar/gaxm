@@ -7,17 +7,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "gaxm", "gaxm.csproj", "{79D
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinarySerializer", "..\submodules\BinarySerializer\src\BinarySerializer.csproj", "{12A8494B-504A-439D-B0EC-EFF24E95B5F2}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "BinarySerializer.Audio", "..\submodules\BinarySerializer.Audio\src\BinarySerializer.Audio.shproj", "{2D0D1BDA-7AB8-4F07-981E-601D44B9CC50}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinarySerializer.Audio", "..\submodules\BinarySerializer.Audio\src\BinarySerializer.Audio.csproj", "{6AC224E6-C73D-4E99-ADC3-B33A94003F73}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "BinarySerializer.GBA.Audio", "..\submodules\BinarySerializer.GBA.Audio\src\BinarySerializer.GBA.Audio.shproj", "{97342D5D-72D6-44E3-9BFD-3E7435879B09}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinarySerializer.GBA.Audio", "..\submodules\BinarySerializer.GBA.Audio\src\BinarySerializer.GBA.Audio.csproj", "{38ADE4A0-BC27-4608-BD59-4EFE831CECDA}"
 EndProject
 Global
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		..\submodules\BinarySerializer.Audio\src\BinarySerializer.Audio.projitems*{2d0d1bda-7ab8-4f07-981e-601d44b9cc50}*SharedItemsImports = 13
-		..\submodules\BinarySerializer.Audio\src\BinarySerializer.Audio.projitems*{79d37e9d-e47e-4cc4-8396-944cd07104b9}*SharedItemsImports = 4
-		..\submodules\BinarySerializer.GBA.Audio\src\BinarySerializer.GBA.Audio.projitems*{79d37e9d-e47e-4cc4-8396-944cd07104b9}*SharedItemsImports = 4
-		..\submodules\BinarySerializer.GBA.Audio\src\BinarySerializer.GBA.Audio.projitems*{97342d5d-72d6-44e3-9bfd-3e7435879b09}*SharedItemsImports = 13
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
@@ -31,6 +25,14 @@ Global
 		{12A8494B-504A-439D-B0EC-EFF24E95B5F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{12A8494B-504A-439D-B0EC-EFF24E95B5F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{12A8494B-504A-439D-B0EC-EFF24E95B5F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6AC224E6-C73D-4E99-ADC3-B33A94003F73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AC224E6-C73D-4E99-ADC3-B33A94003F73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AC224E6-C73D-4E99-ADC3-B33A94003F73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6AC224E6-C73D-4E99-ADC3-B33A94003F73}.Release|Any CPU.Build.0 = Release|Any CPU
+		{38ADE4A0-BC27-4608-BD59-4EFE831CECDA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{38ADE4A0-BC27-4608-BD59-4EFE831CECDA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{38ADE4A0-BC27-4608-BD59-4EFE831CECDA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{38ADE4A0-BC27-4608-BD59-4EFE831CECDA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

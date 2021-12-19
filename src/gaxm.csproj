@@ -52,7 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Settings.cs" />
-    <Compile Include="GAX\GAX2_XMWriter.cs" />
+    <Compile Include="GAX\GAX_XMWriter.cs" />
     <Compile Include="GAX\GAXHelpers.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -63,12 +63,18 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\submodules\BinarySerializer.Audio\src\BinarySerializer.Audio.csproj">
+      <Project>{6ac224e6-c73d-4e99-adc3-b33a94003f73}</Project>
+      <Name>BinarySerializer.Audio</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\submodules\BinarySerializer.GBA.Audio\src\BinarySerializer.GBA.Audio.csproj">
+      <Project>{38ade4a0-bc27-4608-bd59-4efe831cecda}</Project>
+      <Name>BinarySerializer.GBA.Audio</Name>
+    </ProjectReference>
     <ProjectReference Include="..\submodules\BinarySerializer\src\BinarySerializer.csproj">
       <Project>{12a8494b-504a-439d-b0ec-eff24e95b5f2}</Project>
       <Name>BinarySerializer</Name>
     </ProjectReference>
   </ItemGroup>
-  <Import Project="..\submodules\BinarySerializer.Audio\src\BinarySerializer.Audio.projitems" Label="Shared" />
-  <Import Project="..\submodules\BinarySerializer.GBA.Audio\src\BinarySerializer.GBA.Audio.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

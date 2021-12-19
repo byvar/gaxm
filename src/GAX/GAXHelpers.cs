@@ -59,25 +59,25 @@ namespace gaxm
             }
         }
 
-        public static void ExportGAX(string basePath, string mainDirectory, GAX2_Song song, ushort channels) {
+        public static void ExportGAX(string basePath, string mainDirectory, IGAX_Song song, ushort channels) {
 
             Directory.CreateDirectory(mainDirectory); 
-            for (int i = 0; i < song.Samples.Length; i++) {
-                var e = song.Samples[i];
-                string outPath = Path.Combine(mainDirectory, "samples", $"{song.ParsedName} - {song.ParsedArtist}");
+            for (int i = 0; i < song.Info.Samples.Length; i++) {
+                var e = song.Info.Samples[i];
+                string outPath = Path.Combine(mainDirectory, "samples", $"{song.Info.ParsedName} - {song.Info.ParsedArtist}");
                 ExportSample(basePath, outPath, $"{i}_{e.SampleOffset.StringAbsoluteOffset}", e.Sample, 15769, channels);
             }
             var h = song;
-            if (h.SampleRate == 0) return;
+            if (h.Info.SampleRate == 0) return;
 
 
-            GAX2_XMWriter xmw = new GAX2_XMWriter();
+            GAX_XMWriter xmw = new GAX_XMWriter();
             Directory.CreateDirectory(Path.Combine(mainDirectory, "xm"));
 
             XM xm = xmw.ConvertToXM(h);
 
             // Get the output path
-            var outputFilePath = Path.Combine(mainDirectory, "xm", $"{h.ParsedName}.xm");
+            var outputFilePath = Path.Combine(mainDirectory, "xm", $"{h.Info.ParsedName}.xm");
 
             // Create and open the output file
             using (var outputStream = File.Create(outputFilePath)) {
@@ -85,10 +85,10 @@ namespace gaxm
                 using (var xmContext = new Context(basePath, log: Settings.XMLog)) {
                     if (Settings.XMLog) {
                         Directory.CreateDirectory(Settings.XMLogDirectory);
-                        xmContext.Log.OverrideLogPath = Path.Combine(Settings.XMLogDirectory, $"{h.ParsedName}.txt");
+                        xmContext.Log.OverrideLogPath = Path.Combine(Settings.XMLogDirectory, $"{h.Info.ParsedName}.txt");
                     }
                     // Create a key
-                    string xmKey = $"{h.ParsedName}.xm";
+                    string xmKey = $"{h.Info.ParsedName}.xm";
 
                     // Add the file to the context
                     xmContext.AddFile(new StreamFile(xmContext, xmKey, outputStream));
