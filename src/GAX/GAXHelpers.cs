@@ -3,6 +3,7 @@ using BinarySerializer.Audio;
 using BinarySerializer.GBA.Audio.GAX;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace gaxm
 {
@@ -64,8 +65,13 @@ namespace gaxm
             Directory.CreateDirectory(mainDirectory); 
             for (int i = 0; i < song.Info.Samples.Length; i++) {
                 var e = song.Info.Samples[i];
+                if(e.SampleOffset == null) continue;
                 string outPath = Path.Combine(mainDirectory, "samples", $"{song.Info.ParsedName} - {song.Info.ParsedArtist}");
-                ExportSample(basePath, outPath, $"{i}_{e.SampleOffset.StringAbsoluteOffset}", e.Sample, 15769, channels);
+                if (song.Info.Context.GetGAXSettings().MajorVersion < 3) {
+                    ExportSample(basePath, outPath, $"{i}_{e.SampleOffset.StringAbsoluteOffset}", e.SampleSigned.Select(b => (byte)(b+128)).ToArray(), 15769, channels);
+                } else {
+                    ExportSample(basePath, outPath, $"{i}_{e.SampleOffset.StringAbsoluteOffset}", e.SampleUnsigned, 15769, channels);
+                }
             }
             var h = song;
             if (h.Info.SampleRate == 0) return;

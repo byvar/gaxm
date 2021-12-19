@@ -56,12 +56,15 @@ namespace gaxm {
             ProgressBar ProgressBarScan = new ProgressBar(progressSize);
             Console.WriteLine();
 
+            int gaxVersion = 3;
+            GAX_Settings gaxSettings = null;
             Context.ConsoleLog logger = new Context.ConsoleLog();
-            List<GAX3_Song> songs = new List<GAX3_Song>();
+            List<IGAX_Song> songs = new List<IGAX_Song>();
 
             using (Context context = new Context(basePath, log: false, verbose: false)) {
                 context.AddFile(new MemoryMappedFile(context, filename, 0x08000000, Endian.Little));
                 context.GetGAXSettings().EnableErrorChecking = true;
+                gaxSettings = context.GetGAXSettings();
                 var basePtr = context.FilePointer(filename);
                 var s = context.Deserializer;
                 s.Goto(basePtr);
@@ -75,7 +78,8 @@ namespace gaxm {
                         success = s.GetGAXSettings().SerializeVersion(s);
                     });
                     if (success) {
-                        logger.Log(s.GetGAXSettings().MajorVersion);
+                        gaxVersion = s.GetGAXSettings().MajorVersion;
+                        logger.Log(gaxVersion);
                         break;
                     }
                     curPtr += 4;
@@ -90,10 +94,17 @@ namespace gaxm {
                         context.MemoryMap.ClearPointers();
 
                         try {
-                            GAX3_Song Song = null;
-                            Song = s.SerializeObject<GAX3_Song>(Song, name: nameof(Song));
+                            IGAX_Song Song = null;
+                            switch (gaxVersion) {
+                                case 2:
+                                    Song = s.SerializeObject<GAX2_Song>(default, name: nameof(Song));
+                                    break;
+                                case 3:
+                                    Song = s.SerializeObject<GAX3_Song>(default, name: nameof(Song));
+                                    break;
+                            }
                             if (Song.Info.Name.Length <= 4 || !Song.Info.Name.Contains("\" © ")) {
-                                throw new BinarySerializableException(Song, $"Incorrect name: {Song.Info.Name}");
+                                throw new Exception($"{Song.Offset}: Incorrect name: {Song.Info.Name}");
                             }
                             logger.Log($"{Song.Offset}: {Song.Info.ParsedName} - {Song.Info.ParsedArtist}");
                             songs.Add(Song);
@@ -119,7 +130,8 @@ namespace gaxm {
                         var song = songs[i];
                         ProgressBarLog.Refresh((int)((i / (float)songs.Count) * progressSize), $"Logging {i}/{songs.Count}: {song.Info.Name}");
 
-                        using (Context context = new Context(basePath, log: Settings.Log, verbose: false)) {
+                        using (Context context = new Context(basePath, log: Settings.Log, verbose: true)) {
+                            context.SetGAXSettings(gaxSettings);
                             Directory.CreateDirectory(Settings.LogDirectory);
                             context.Log.OverrideLogPath = Path.Combine(Settings.LogDirectory, $"{song.Info.ParsedName}.txt");
                             context.AddFile(new MemoryMappedFile(context, filename, 0x08000000, Endian.Little));
@@ -129,8 +141,15 @@ namespace gaxm {
                             // Re-read song. We could have just done this before,
                             // but we only want to log valid songs, so we do it after we've verified that it's valid
                             s.DoAt(song.Offset, () => {
-                                GAX3_Song Song = null;
-                                Song = s.SerializeObject<GAX3_Song>(Song, name: nameof(Song));
+                                IGAX_Song Song = null;
+                                switch (gaxVersion) {
+                                    case 2:
+                                        Song = s.SerializeObject<GAX2_Song>(default, name: nameof(Song));
+                                        break;
+                                    case 3:
+                                        Song = s.SerializeObject<GAX3_Song>(default, name: nameof(Song));
+                                        break;
+                                }
                             });
                         };
                     }

@@ -34,10 +34,22 @@ namespace gaxm
             return xm;
         }
         public short[] ConvertSample(byte[] sample) {
+            if(sample == null) return new short[0];
             short[] delta = new short[sample.Length];
             int cur = 0;
             for (int i = 0; i < sample.Length; i++) {
                 short b = (short)(sample[i] - 128);
+                delta[i] = (short)((b - cur) * 256);
+                cur = b;
+            }
+            return delta;
+        }
+        public short[] ConvertSampleSigned(sbyte[] sample) {
+            if (sample == null) return new short[0];
+            short[] delta = new short[sample.Length];
+            int cur = 0;
+            for (int i = 0; i < sample.Length; i++) {
+                short b = (short)(sample[i]);
                 delta[i] = (short)((b - cur) * 256);
                 cur = b;
             }
@@ -55,27 +67,45 @@ namespace gaxm
 			GetInstrument_ConfigureEnvelope(gax_instr, instr);
 
             // Create samples
-            var gax_keymap = gax_instr.Rows[0];
-            var gax_sampleIndex = gax_keymap.SampleIndex > 0 ? gax_keymap.SampleIndex - 1 : 0;
+            var gax_instrRow = gax_instr.Rows[0];
+            var gax_sampleIndex = gax_instrRow.SampleIndex > 0 ? gax_instrRow.SampleIndex - 1 : 0;
             var gax_smp = gax_instr.Samples[gax_sampleIndex];
 
-			XM_Sample smp = new XM_Sample {
+            bool is16Bit = true;
+            /*if (song.Info.Context.GetGAXSettings().MajorVersion < 3) {
+                is16Bit = false;
+            }*/
+            bool isSigned = false;
+            if (song.Info.Context.GetGAXSettings().MajorVersion < 3) {
+                isSigned = true;
+            }
+
+
+            XM_Sample smp = new XM_Sample {
 				SampleName = "Sample " + gax_instr.SampleIndices[gax_sampleIndex],
-				SampleData16 = ConvertSample(song.Info.Samples[index].Sample),
-				Type = 1 << 4 // 16 bit sample data
+				SampleData16 = (isSigned
+                ? ConvertSampleSigned(song.Info.Samples[gax_instr.SampleIndices[gax_sampleIndex]].SampleSigned)
+                : ConvertSample(song.Info.Samples[gax_instr.SampleIndices[gax_sampleIndex]].SampleUnsigned)),
+                Type = (byte)(is16Bit ? (1 << 4) : 0) // 16 bit sample data
 			};
-			smp.SampleLength = (uint)smp.SampleData16.Length * 2;
+			smp.SampleLength = (uint)(smp.SampleData16.Length);
 
             // If loop
             bool loop = gax_smp.LoopStart != 0 || gax_smp.LoopEnd != 0;
             if (loop) {
                 smp.Type = (byte)BitHelpers.SetBits(smp.Type, 1, 2, 0);
                 if(gax_smp.IsBidirectional) smp.Type = (byte)BitHelpers.SetBits(smp.Type, 2, 2, 0); // Bidirectional
-                smp.SampleLoopStart = gax_smp.LoopStart * 2;
-                smp.SampleLoopLength = (gax_smp.LoopEnd - gax_smp.LoopStart) * 2 - 2;
+                smp.SampleLoopStart = gax_smp.LoopStart;
+                smp.SampleLoopLength = (gax_smp.LoopEnd - gax_smp.LoopStart) - 1;
             }
+            if (is16Bit) {
+                smp.SampleLength *= 2;
+                smp.SampleLoopStart *= 2;
+                smp.SampleLoopLength *= 2;
+            }
+
             int instrPitch = (gax_smp.Pitch / 32);
-            int relNote = gax_keymap.RelativeNoteNumber;
+            int relNote = gax_instrRow.RelativeNoteNumber;
             int relativeNoteNumber =
                 instrPitch - 1 // GAX notes start at 1
                 + (gax_instr.Rows[0].DontUseNotePitch ? 0 : (relNote - 2));
@@ -83,7 +113,7 @@ namespace gaxm
             Debug?.Log($"(Instrument {ind}) Sample:{gax_instr.SampleIndices[gax_sampleIndex]}" +
                 $" - Pitch:{gax_smp.Pitch}" +
                 $" - Relative Note Number:{relativeNoteNumber}" +
-                $" - Cfg1:{gax_keymap.DontUseNotePitch}" +
+                $" - Cfg1:{gax_instrRow.DontUseNotePitch}" +
                 $" - CfgRelNote:{relNote}" +
                 $" - NumRows:{gax_instr.NumRows}" +
                 $"");
