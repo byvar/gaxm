@@ -35,6 +35,8 @@ namespace gaxm {
                    });
         }
 
+        private const int progressSize = 50;
+        private const int progressTextWidth = 40;
 
         private static void ParseROM(Options options) {
             Settings.Verbose = options.Verbose;
@@ -50,8 +52,6 @@ namespace gaxm {
                 options.OutputDirectory = Path.GetFileNameWithoutExtension(fullPath);
             }
 
-            const int progressSize = 50;
-
             int gaxVersion = 3;
             GAX_Settings gaxSettings = null;
             Context.ConsoleLog logger = new Context.ConsoleLog();
@@ -61,43 +61,26 @@ namespace gaxm {
                 context.AddFile(new MemoryMappedFile(context, filename, 0x08000000, Endian.Little));
                 context.GetGAXSettings().EnableErrorChecking = true;
                 gaxSettings = context.GetGAXSettings();
-                var basePtr = context.FilePointer(filename);
-                var s = context.Deserializer;
+                Pointer basePtr = context.FilePointer(filename);
+                BinaryDeserializer s = context.Deserializer;
                 s.Goto(basePtr);
 
-                // Scan ROM for version string
-                ProgressBar ProgressBarVersionScan = new ProgressBar(progressSize);
-                Console.WriteLine();
-                long curPtr = 0;
-                long len = s.CurrentLength - 16;
-                bool success = false;
-                while (curPtr < len) {
-                    s.DoAt(basePtr + curPtr, () => {
-                        success = s.GetGAXSettings().SerializeVersion(s);
-                    });
-                    if (success) {
-                        gaxVersion = gaxSettings.MajorVersion;
-                        logger.Log($"{basePtr + curPtr}:");
-                        logger.Log(gaxSettings.FullVersionString);
-                        logger.Log($"Parsed GAX version: {gaxVersion}");
-                        Console.WriteLine();
-                        curPtr = len-4;
-                    }
-                    curPtr += 4;
-                    if (curPtr % (1 << 16) == 0 || curPtr == len) ProgressBarVersionScan.Refresh((int)((curPtr / (float)len) * progressSize), $"Ver. scan: {curPtr:X8}/{len:X8}");
-                }
-                if (!success) {
-                    logger.Log($"GAX version string not found. Assuming GAX version {gaxSettings.MajorVersion}");
-                    Console.WriteLine();
-                }
+                // Scan ROM for pointers
+                HashSet<Pointer> pointers = FindPointers(s, basePtr);
 
-                // Scan ROM
-                ProgressBar ProgressBarScan = new ProgressBar(progressSize);
+                // Scan ROM for the version
+                gaxVersion = FindVersion(s, pointers, logger, gaxSettings) ?? gaxVersion;
+
+                ProgressBar ProgressBarGaxScan = new ProgressBar(progressSize, progressTextWidth);
                 Console.WriteLine();
-                curPtr = 0;
-                len = s.CurrentLength - 200;
-                while (curPtr < len) {
-                    s.DoAt(basePtr + curPtr, () => {
+
+                int pointerIndex = 0;
+                float pointersCountFloat = pointers.Count;
+
+                foreach (Pointer p in pointers)
+                {
+                    s.DoAt(p, () => 
+                    {
                         context.Cache.Structs.Clear();
                         context.MemoryMap.ClearPointers();
 
@@ -121,9 +104,11 @@ namespace gaxm {
                         }
 
                     });
-                    curPtr += 4;
-                    //if (curPtr % (1 << 12) == 0) logger.Log($"{curPtr:X8}/{len:X8}");
-                    if (curPtr % (1 << 16) == 0 || curPtr == len) ProgressBarScan.Refresh((int)((curPtr / (float)len) * progressSize), $"Scanning: {curPtr:X8}/{len:X8}");
+
+                    pointerIndex++;
+
+                    if (pointerIndex % 16 == 0 || pointerIndex == pointers.Count)
+                        ProgressBarGaxScan.Refresh((int)(pointerIndex / pointersCountFloat * progressSize), $"Scanning: {pointerIndex}/{pointers.Count}");
                 }
             };
             Console.WriteLine();
@@ -168,7 +153,7 @@ namespace gaxm {
 
 
                 // Convert songs
-                ProgressBar ProgressBarConvert = new ProgressBar(progressSize);
+                ProgressBar ProgressBarConvert = new ProgressBar(progressSize, progressTextWidth);
                 Console.WriteLine();
 
                 for (int i = 0; i < songs.Count; i++) {
@@ -182,6 +167,70 @@ namespace gaxm {
                 }
                 ProgressBarConvert.Refresh(progressSize, $"Converting: Finished");
             }
+        }
+
+        private static HashSet<Pointer> FindPointers(SerializerObject s, Pointer basePtr)
+        {
+            ProgressBar progressBarPointerScan = new ProgressBar(progressSize, progressTextWidth);
+            Console.WriteLine();
+
+            long len = s.CurrentLength - 4;
+            float lenFloat = len;
+            int curPtr = 0;
+
+            // Find all pointers in the ROM and attempt to find the GAX structs from those
+            var pointers = new HashSet<Pointer>();
+
+            while (curPtr < len)
+            {
+                Pointer p = s.DoAt(basePtr + curPtr, () => s.SerializePointer(default, allowInvalid: true));
+
+                if (p != null)
+                    pointers.Add(p);
+
+                curPtr += 4;
+
+                if (curPtr % (1 << 16) == 0 || curPtr == len)
+                    progressBarPointerScan.Refresh((int)((curPtr / lenFloat) * progressSize), $"Scanning pointers: {curPtr:X8}/{len:X8}");
+            }
+
+            return pointers;
+        }
+
+        private static int? FindVersion(SerializerObject s, HashSet<Pointer> pointers, ILogger logger, GAX_Settings gaxSettings)
+        {
+            ProgressBar progressBarVersionScan = new ProgressBar(progressSize, progressTextWidth);
+            Console.WriteLine();
+
+            bool success = false;
+
+            int pointerIndex = 0;
+            float pointersCountFloat = pointers.Count;
+
+            foreach (Pointer p in pointers)
+            {
+                s.DoAt(p, () => success = s.GetGAXSettings().SerializeVersion(s));
+
+                pointerIndex++;
+
+                if (pointerIndex % 16 == 0 || pointerIndex == pointers.Count)
+                    progressBarVersionScan.Refresh((int)(pointerIndex / pointersCountFloat * progressSize), $"Version scan: {pointerIndex}/{pointers.Count}");
+
+                if (success)
+                {
+                    int gaxVersion = gaxSettings.MajorVersion;
+                    logger.Log($"{p}:");
+                    logger.Log(gaxSettings.FullVersionString);
+                    logger.Log($"Parsed GAX version: {gaxVersion}");
+                    Console.WriteLine();
+                    return gaxVersion;
+                }
+            }
+
+            logger.Log($"GAX version string not found. Assuming GAX version {gaxSettings.MajorVersion}");
+            Console.WriteLine();
+
+            return null;
         }
     }
 }
