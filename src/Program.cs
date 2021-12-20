@@ -24,6 +24,7 @@ namespace gaxm {
             [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
             public bool Verbose { get; set; }
 
+            // TODO: Allow option for providing the address of a single song, and another option for setting the major GAX version
         }
 
 
