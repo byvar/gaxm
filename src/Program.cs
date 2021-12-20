@@ -103,6 +103,7 @@ namespace gaxm {
                         try {
                             IGAX_Song Song = null;
                             switch (gaxVersion) {
+                                case 1:
                                 case 2:
                                     Song = s.SerializeObject<GAX2_Song>(default, name: nameof(Song));
                                     break;
@@ -150,6 +151,7 @@ namespace gaxm {
                             s.DoAt(song.Offset, () => {
                                 IGAX_Song Song = null;
                                 switch (gaxVersion) {
+                                    case 1:
                                     case 2:
                                         Song = s.SerializeObject<GAX2_Song>(default, name: nameof(Song));
                                         break;

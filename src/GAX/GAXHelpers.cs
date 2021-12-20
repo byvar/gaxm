@@ -74,7 +74,7 @@ namespace gaxm
                 }
             }
             var h = song;
-            if (h.Info.SampleRate == 0) return;
+            if (h.Info.SampleRate == 0 && h.Info.Context.GetGAXSettings().MajorVersion >= 2) return;
 
 
             GAX_XMWriter xmw = new GAX_XMWriter();
