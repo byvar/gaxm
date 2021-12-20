@@ -7,7 +7,7 @@
     <ProjectGuid>{79D37E9D-E47E-4CC4-8396-944CD07104B9}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>gaxm</RootNamespace>
-    <AssemblyName>GaXM</AssemblyName>
+    <AssemblyName>gaxm</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
