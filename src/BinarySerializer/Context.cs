@@ -11,9 +11,19 @@ namespace gaxm {
             basePath: basePath, // Pass in the base path
             settings: new SerializerSettings(), // Pass in the settings
             serializerLog: log ? new SerializerLog() : null, // Use serializer log for logging to a file
-            fileManager: null,
+            fileManager: new CustomFileManager(),
             logger: verbose ? new ConsoleLog() : null) // Use console log
         {}
+
+        public class CustomFileManager : IFileManager {
+            public bool DirectoryExists(string path) => Directory.Exists(path);
+            public bool FileExists(string path) => File.Exists(path);
+
+            public Stream GetFileReadStream(string path) => new MemoryStream(File.ReadAllBytes(path));
+            public Stream GetFileWriteStream(string path, bool recreateOnWrite = true) => recreateOnWrite ? File.Create(path) : File.OpenWrite(path);
+
+            public Task FillCacheForReadAsync(long length, Reader reader) => Task.CompletedTask;
+        }
 
         public class SerializerSettings : ISerializerSettings {
             /// <summary>

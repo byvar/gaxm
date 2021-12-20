@@ -5,9 +5,6 @@ using Konsole;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace gaxm {
 	class Program {
@@ -52,9 +49,7 @@ namespace gaxm {
                 options.OutputDirectory = Path.GetFileNameWithoutExtension(fullPath);
             }
 
-            int progressSize = 30;
-            ProgressBar ProgressBarScan = new ProgressBar(progressSize);
-            Console.WriteLine();
+            const int progressSize = 50;
 
             int gaxVersion = 3;
             GAX_Settings gaxSettings = null;
@@ -69,23 +64,35 @@ namespace gaxm {
                 var s = context.Deserializer;
                 s.Goto(basePtr);
 
-                // Scan ROM 1
+                // Scan ROM for version string
+                ProgressBar ProgressBarVersionScan = new ProgressBar(progressSize);
+                Console.WriteLine();
                 long curPtr = 0;
                 long len = s.CurrentLength - 16;
+                bool success = false;
                 while (curPtr < len) {
-                    bool success = false;
                     s.DoAt(basePtr + curPtr, () => {
                         success = s.GetGAXSettings().SerializeVersion(s);
                     });
                     if (success) {
-                        gaxVersion = s.GetGAXSettings().MajorVersion;
-                        logger.Log(gaxVersion);
-                        break;
+                        gaxVersion = gaxSettings.MajorVersion;
+                        logger.Log($"{basePtr + curPtr}:");
+                        logger.Log(gaxSettings.FullVersionString);
+                        logger.Log($"Parsed GAX version: {gaxVersion}");
+                        Console.WriteLine();
+                        curPtr = len-4;
                     }
                     curPtr += 4;
+                    if (curPtr % (1 << 16) == 0 || curPtr == len) ProgressBarVersionScan.Refresh((int)((curPtr / (float)len) * progressSize), $"Ver. scan: {curPtr:X8}/{len:X8}");
+                }
+                if (!success) {
+                    logger.Log($"GAX version string not found. Assuming GAX version {gaxSettings.MajorVersion}");
+                    Console.WriteLine();
                 }
 
-                 // Scan ROM
+                // Scan ROM
+                ProgressBar ProgressBarScan = new ProgressBar(progressSize);
+                Console.WriteLine();
                 curPtr = 0;
                 len = s.CurrentLength - 200;
                 while (curPtr < len) {
@@ -128,7 +135,7 @@ namespace gaxm {
                     // Create a separate log file for each song
                     for (int i = 0; i < songs.Count; i++) {
                         var song = songs[i];
-                        ProgressBarLog.Refresh((int)((i / (float)songs.Count) * progressSize), $"Logging {i}/{songs.Count}: {song.Info.Name}");
+                        ProgressBarLog.Refresh((int)((i / (float)songs.Count) * progressSize), $"Logging {i}/{songs.Count}: {song.Info.ParsedName}");
 
                         using (Context context = new Context(basePath, log: Settings.Log, verbose: true)) {
                             context.SetGAXSettings(gaxSettings);
@@ -163,7 +170,7 @@ namespace gaxm {
 
                 for (int i = 0; i < songs.Count; i++) {
                     var song = songs[i];
-                    ProgressBarConvert.Refresh((int)((i / (float)songs.Count) * progressSize), $"Converting {i}/{songs.Count}: {song.Info.Name}");
+                    ProgressBarConvert.Refresh((int)((i / (float)songs.Count) * progressSize), $"Converting {i}/{songs.Count}: {song.Info.ParsedName}");
                     try {
                         GAXHelpers.ExportGAX(basePath, options.OutputDirectory, song, 2);
                     } catch(Exception ex) {
