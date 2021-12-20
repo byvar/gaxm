@@ -116,7 +116,7 @@ namespace gaxm {
             if (songs.Count != 0) {
                 if (Settings.Log) {
                     // Log song data
-                    ProgressBar ProgressBarLog = new ProgressBar(progressSize);
+                    ProgressBar ProgressBarLog = new ProgressBar(progressSize, progressTextWidth);
                     Console.WriteLine();
 
                     // Create a separate log file for each song
@@ -213,8 +213,11 @@ namespace gaxm {
 
                 pointerIndex++;
 
-                if (pointerIndex % 16 == 0 || pointerIndex == pointers.Count)
+                if (pointerIndex == pointers.Count || success) {
+                    progressBarVersionScan.Refresh(progressSize, "Version scan: Finished");
+                } else if (pointerIndex % 16 == 0) {
                     progressBarVersionScan.Refresh((int)(pointerIndex / pointersCountFloat * progressSize), $"Version scan: {pointerIndex}/{pointers.Count}");
+                }
 
                 if (success)
                 {

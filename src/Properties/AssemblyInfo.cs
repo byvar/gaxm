@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("GaXM")]
-[assembly: AssemblyCopyright("Created by Droolie, 2021")]
+[assembly: AssemblyCopyright("Created by Droolie & RayCarrot, 2021")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
