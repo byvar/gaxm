@@ -211,7 +211,7 @@ namespace gaxm {
                 switch (gaxVersion) {
                     case 1:
                     case 2:
-                        if (!pointers.ContainsKey(songInfoPtr)) continue;
+                        if (!pointers.ContainsKey(songInfoPtr)) break;
                         foreach (var ptr2 in pointers[songInfoPtr]) {
                             var soundHandlerPtr = basePtr + ptr2 - 0x18;
                             if (!pointers.ContainsKey(soundHandlerPtr)) continue;
@@ -238,7 +238,7 @@ namespace gaxm {
                         break;
                     case 3:
                         var gax3SongPtr = songInfoPtr;
-                        if (pointers.ContainsKey(gax3SongPtr)) continue;
+                        if (pointers.ContainsKey(gax3SongPtr)) break;
                         s.DoAt(gax3SongPtr, () => {
                             context.Cache.Structs.Clear();
                             context.MemoryMap.ClearPointers();
