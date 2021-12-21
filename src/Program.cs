@@ -5,6 +5,7 @@ using Konsole;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace gaxm {
 	class Program {
@@ -66,52 +67,20 @@ namespace gaxm {
                 s.Goto(basePtr);
 
                 // Scan ROM for pointers
-                HashSet<Pointer> pointers = FindPointers(s, basePtr);
+                Dictionary<Pointer, List<int>> pointers = FindPointers(s, basePtr);
 
                 // Scan ROM for the version
                 gaxVersion = FindVersion(s, pointers, logger, gaxSettings) ?? gaxVersion;
 
-                ProgressBar ProgressBarGaxScan = new ProgressBar(progressSize, progressTextWidth);
-                Console.WriteLine();
+                FastScan(s, pointers, logger, songs);
 
-                int pointerIndex = 0;
-                float pointersCountFloat = pointers.Count;
-
-                foreach (Pointer p in pointers)
-                {
-                    s.DoAt(p, () => 
-                    {
-                        context.Cache.Structs.Clear();
-                        context.MemoryMap.ClearPointers();
-
-                        try {
-                            IGAX_Song Song = null;
-                            switch (gaxVersion) {
-                                case 1:
-                                case 2:
-                                    Song = s.SerializeObject<GAX2_Song>(default, name: nameof(Song));
-                                    break;
-                                case 3:
-                                    Song = s.SerializeObject<GAX3_Song>(default, name: nameof(Song));
-                                    break;
-                            }
-                            if (Song.Info.Name.Length <= 4 || !Song.Info.Name.Contains("\" © ")) {
-                                throw new Exception($"{Song.Offset}: Incorrect name: {Song.Info.Name}");
-                            }
-                            logger.Log($"{Song.Offset}: {Song.Info.ParsedName} - {Song.Info.ParsedArtist}");
-                            songs.Add(Song);
-                        } catch {
-                        }
-
-                    });
-
-                    pointerIndex++;
-
-                    if (pointerIndex % 16 == 0 || pointerIndex == pointers.Count)
-                        ProgressBarGaxScan.Refresh((int)(pointerIndex / pointersCountFloat * progressSize), $"Scanning: {pointerIndex}/{pointers.Count}");
+                if (songs.Count > 0) {
+                    var distinctPtrs = songs.Select(sng => sng.Info.InstrumentSetPointer).Distinct().ToArray();
+                    foreach (var instrSetPtr in distinctPtrs) {
+                        FastScan_FindUnused(s, pointers, logger, songs, instrSetPtr, basePtr);
+                    }
                 }
             };
-            Console.WriteLine();
 
             if (songs.Count != 0) {
                 if (Settings.Log) {
@@ -169,7 +138,122 @@ namespace gaxm {
             }
         }
 
-        private static HashSet<Pointer> FindPointers(SerializerObject s, Pointer basePtr)
+        private static void FastScan(SerializerObject s, Dictionary<Pointer, List<int>> pointers, Context.ConsoleLog logger, List<IGAX_Song> songs) {
+            ProgressBar ProgressBarGaxScan = new ProgressBar(progressSize, progressTextWidth);
+            Console.WriteLine();
+
+            int pointerIndex = 0;
+            float pointersCountFloat = pointers.Count;
+            int gaxVersion = s.GetGAXSettings().MajorVersion;
+            var context = s.Context;
+
+            foreach (Pointer p in pointers.Keys) {
+                s.DoAt(p, () =>
+                {
+                    context.Cache.Structs.Clear();
+                    context.MemoryMap.ClearPointers();
+
+                    try {
+                        IGAX_Song Song = null;
+                        switch (gaxVersion) {
+                            case 1:
+                            case 2:
+                                Song = s.SerializeObject<GAX2_Song>(default, name: nameof(Song));
+                                break;
+                            case 3:
+                                Song = s.SerializeObject<GAX3_Song>(default, name: nameof(Song));
+                                break;
+                        }
+                        if (Song.Info.Name.Length <= 4 || !Song.Info.Name.Contains("\" © ")) {
+                            throw new Exception($"{Song.Offset}: Incorrect name: {Song.Info.Name}");
+                        }
+                        logger.Log($"{Song.Offset}: {Song.Info.ParsedName} - {Song.Info.ParsedArtist}");
+                        songs.Add(Song);
+                    } catch {
+                    }
+
+                });
+
+                pointerIndex++;
+
+                if (pointerIndex % 16 == 0 || pointerIndex == pointers.Count)
+                    ProgressBarGaxScan.Refresh((int)(pointerIndex / pointersCountFloat * progressSize), $"Scanning: {pointerIndex}/{pointers.Count}");
+            }
+            Console.WriteLine();
+        }
+
+        private static void FastScan_FindUnused(SerializerObject s, Dictionary<Pointer, List<int>> pointers, Context.ConsoleLog logger, List<IGAX_Song> songs, Pointer instrumentSetPointer, Pointer basePtr) {
+            ProgressBar ProgressBarGaxScan = new ProgressBar(progressSize, progressTextWidth);
+            Console.WriteLine();
+
+            int pointerIndex = 0;
+            float pointersCountFloat = pointers[instrumentSetPointer].Count;
+            int gaxVersion = s.GetGAXSettings().MajorVersion;
+            var context = s.Context;
+
+            var instrSetPtrOffsetInGAX_SongInfo = 16;
+            if (s.GetGAXSettings().MajorVersion < 2 && !(s.GetGAXSettings().MinorVersion == 99 && s.GetGAXSettings().MinorVersionAdd?.ToLower() == "f")) {
+                instrSetPtrOffsetInGAX_SongInfo -= 4;
+            }
+
+            foreach (var ptr in pointers[instrumentSetPointer]) {
+                var songInfoPtr = basePtr + ptr - instrSetPtrOffsetInGAX_SongInfo;
+                switch (gaxVersion) {
+                    case 1:
+                    case 2:
+                        if (!pointers.ContainsKey(songInfoPtr)) continue;
+                        foreach (var ptr2 in pointers[songInfoPtr]) {
+                            var soundHandlerPtr = basePtr + ptr2 - 0x18;
+                            if (!pointers.ContainsKey(soundHandlerPtr)) continue;
+                            foreach (var ptr3 in pointers[soundHandlerPtr]) {
+                                var gax2SongPtr = basePtr + ptr3 - 0x8;
+                                if(pointers.ContainsKey(gax2SongPtr) || songs.Any(sng => sng.Offset == gax2SongPtr)) continue;
+
+                                s.DoAt(gax2SongPtr, () => {
+                                    context.Cache.Structs.Clear();
+                                    context.MemoryMap.ClearPointers();
+
+                                    try {
+                                        IGAX_Song Song = s.SerializeObject<GAX2_Song>(default, name: nameof(Song));
+                                        if (Song.Info.Name.Length <= 4 || !Song.Info.Name.Contains("\" © ")) {
+                                            throw new Exception($"{Song.Offset}: Incorrect name: {Song.Info.Name}");
+                                        }
+                                        logger.Log($"{Song.Offset}: {Song.Info.ParsedName} - {Song.Info.ParsedArtist}");
+                                        songs.Add(Song);
+                                    } catch {
+                                    }
+                                });
+                            }
+                        }
+                        break;
+                    case 3:
+                        var gax3SongPtr = songInfoPtr;
+                        if (pointers.ContainsKey(gax3SongPtr)) continue;
+                        s.DoAt(gax3SongPtr, () => {
+                            context.Cache.Structs.Clear();
+                            context.MemoryMap.ClearPointers();
+
+                            try {
+                                IGAX_Song Song = s.SerializeObject<GAX3_Song>(default, name: nameof(Song));
+                                if (Song.Info.Name.Length <= 4 || !Song.Info.Name.Contains("\" © ")) {
+                                    throw new Exception($"{Song.Offset}: Incorrect name: {Song.Info.Name}");
+                                }
+                                logger.Log($"{Song.Offset}: {Song.Info.ParsedName} - {Song.Info.ParsedArtist}");
+                                songs.Add(Song);
+                            } catch {
+                            }
+                        });
+                        break;
+                }
+
+                pointerIndex++;
+
+                ProgressBarGaxScan.Refresh((int)(pointerIndex / pointersCountFloat * progressSize), $"Scanning Unreferenced: {pointerIndex}/{pointers[instrumentSetPointer].Count}");
+            }
+            Console.WriteLine();
+        }
+
+        private static Dictionary<Pointer, List<int>> FindPointers(SerializerObject s, Pointer basePtr)
         {
             ProgressBar progressBarPointerScan = new ProgressBar(progressSize, progressTextWidth);
             Console.WriteLine();
@@ -179,14 +263,15 @@ namespace gaxm {
             int curPtr = 0;
 
             // Find all pointers in the ROM and attempt to find the GAX structs from those
-            var pointers = new HashSet<Pointer>();
+            var pointers = new Dictionary<Pointer, List<int>>();
 
-            while (curPtr < len)
-            {
+            while (curPtr < len) {
                 Pointer p = s.DoAt(basePtr + curPtr, () => s.SerializePointer(default, allowInvalid: true));
 
-                if (p != null)
-                    pointers.Add(p);
+                if (p != null) {
+                    if (!pointers.ContainsKey(p)) pointers[p] = new List<int>();
+                    pointers[p].Add(curPtr);
+                }
 
                 curPtr += 4;
 
@@ -197,7 +282,7 @@ namespace gaxm {
             return pointers;
         }
 
-        private static int? FindVersion(SerializerObject s, HashSet<Pointer> pointers, ILogger logger, GAX_Settings gaxSettings)
+        private static int? FindVersion(SerializerObject s, Dictionary<Pointer, List<int>> pointers, ILogger logger, GAX_Settings gaxSettings)
         {
             ProgressBar progressBarVersionScan = new ProgressBar(progressSize, progressTextWidth);
             Console.WriteLine();
@@ -207,7 +292,7 @@ namespace gaxm {
             int pointerIndex = 0;
             float pointersCountFloat = pointers.Count;
 
-            foreach (Pointer p in pointers)
+            foreach (Pointer p in pointers.Keys)
             {
                 s.DoAt(p, () => success = s.GetGAXSettings().SerializeVersion(s));
 
