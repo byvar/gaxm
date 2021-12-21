@@ -83,10 +83,13 @@ namespace gaxm {
             };
 
             if (songs.Count != 0) {
-                foreach (var song in songs) {
-                    // Prevent duplicate names
-                    if (songs.Any(sng => sng.Offset != song.Offset && sng.Info.ParsedName == song.Info.ParsedName)) {
-                        song.Info.ParsedName = $"{song.Offset.StringAbsoluteOffset}_{song.Info.ParsedName}";
+                // Prevent duplicate names
+                var groups = songs.GroupBy(sng => sng.Info.ParsedName);
+                foreach (var group in groups) {
+                    if (group.Count() > 1) {
+                        foreach (var song in group) {
+                            song.Info.ParsedName = $"{song.Offset.StringAbsoluteOffset}_{song.Info.ParsedName}";
+                        }
                     }
                 }
 
