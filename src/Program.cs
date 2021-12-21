@@ -83,6 +83,13 @@ namespace gaxm {
             };
 
             if (songs.Count != 0) {
+                foreach (var song in songs) {
+                    // Prevent duplicate names
+                    if (songs.Any(sng => sng.Offset != song.Offset && sng.Info.ParsedName == song.Info.ParsedName)) {
+                        song.Info.ParsedName = $"{song.Offset.StringAbsoluteOffset}_{song.Info.ParsedName}";
+                    }
+                }
+
                 if (Settings.Log) {
                     // Log song data
                     ProgressBar ProgressBarLog = new ProgressBar(progressSize, progressTextWidth);
