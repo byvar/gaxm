@@ -64,6 +64,12 @@ namespace gaxm
 				InstrumentName = "Instrument " + ind
 			};
 
+            if (gax_instr.VibratoDepth != 0) {
+                instr.VibratoDepth = (byte)(gax_instr.VibratoDepth);
+                instr.VibratoRate = (byte)(gax_instr.VibratoSpeed % 0x3F);
+                instr.VibratoSweep = gax_instr.VibratoDelay; // Not the same, but similar
+                instr.VibratoType = 0; // GAX vibrato is sine-only
+            }
 			GetInstrument_ConfigureEnvelope(gax_instr, instr);
 
             // Create samples
@@ -104,7 +110,7 @@ namespace gaxm
                 smp.SampleLoopLength *= 2;
             }
 
-            int instrPitch = (gax_smp.Pitch / 32);
+            int instrPitch = gax_smp.Pitch / 32;
             int relNote = gax_instrRow.RelativeNoteNumber;
             int relativeNoteNumber =
                 instrPitch - 1 // GAX notes start at 1
