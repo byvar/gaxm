@@ -106,7 +106,7 @@ namespace gaxm {
                         using (Context context = new Context(basePath, log: Settings.Log, verbose: true)) {
                             context.SetGAXSettings(gaxSettings);
                             Directory.CreateDirectory(Settings.LogDirectory);
-                            context.Log.OverrideLogPath = Path.Combine(Settings.LogDirectory, $"{song.Info.ParsedName}.txt");
+                            ((Context.SerializerLog)context.Log).OverrideLogPath = Path.Combine(Settings.LogDirectory, $"{song.Info.ParsedName}.txt");
                             context.AddFile(new MemoryMappedFile(context, filename, 0x08000000, Endian.Little));
                             var basePtr = context.FilePointer(filename);
                             var s = context.Deserializer;

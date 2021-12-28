@@ -91,7 +91,7 @@ namespace gaxm
                 using (var xmContext = new Context(basePath, log: Settings.XMLog)) {
                     if (Settings.XMLog) {
                         Directory.CreateDirectory(Settings.XMLogDirectory);
-                        xmContext.Log.OverrideLogPath = Path.Combine(Settings.XMLogDirectory, $"{h.Info.ParsedName}.txt");
+                        ((Context.SerializerLog)xmContext.Log).OverrideLogPath = Path.Combine(Settings.XMLogDirectory, $"{h.Info.ParsedName}.txt");
                     }
                     // Create a key
                     string xmKey = $"{h.Info.ParsedName}.xm";

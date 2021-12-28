@@ -16,7 +16,9 @@ namespace gaxm {
         {}
 
         public class CustomFileManager : IFileManager {
-            public bool DirectoryExists(string path) => Directory.Exists(path);
+			public PathSeparatorChar SeparatorCharacter => PathSeparatorChar.ForwardSlash;
+
+			public bool DirectoryExists(string path) => Directory.Exists(path);
             public bool FileExists(string path) => File.Exists(path);
 
             public Stream GetFileReadStream(string path) => new MemoryStream(File.ReadAllBytes(path));
