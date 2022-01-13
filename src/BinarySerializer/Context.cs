@@ -52,7 +52,9 @@ namespace gaxm {
             /// The pointer size to use when logging a <see cref="Pointer"/>. Set to <see langword="null"/> to dynamically determine the appropriate size.
             /// </summary>
             public PointerSize? LoggingPointerSize => PointerSize.Pointer32;
-        }
+
+			public Endian DefaultEndianness => Endian.Little;
+		}
 
         public class ConsoleLog : ILogger {
             public void Log(object log) => Console.WriteLine(log);
