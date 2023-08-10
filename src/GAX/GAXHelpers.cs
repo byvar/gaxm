@@ -1,6 +1,6 @@
 ﻿using BinarySerializer;
 using BinarySerializer.Audio;
-using BinarySerializer.GBA.Audio.GAX;
+using BinarySerializer.Audio.GBA.GAX;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -77,7 +77,7 @@ namespace gaxm
                 using (var xmContext = new Context(basePath, log: Settings.XMLog)) {
                     if (Settings.XMLog) {
                         Directory.CreateDirectory(Settings.XMLogDirectory);
-                        ((Context.SerializerLog)xmContext.Log).OverrideLogPath = Path.Combine(Settings.XMLogDirectory, $"{h.Info.ParsedName}.txt");
+                        ((Context.SimpleSerializerLogger)xmContext.SerializerLogger).OverrideLogPath = Path.Combine(Settings.XMLogDirectory, $"{h.Info.ParsedName}.txt");
                     }
                     // Create a key
                     string xmKey = $"{h.Info.ParsedName}.xm";

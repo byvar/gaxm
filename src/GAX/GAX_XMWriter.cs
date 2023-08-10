@@ -3,17 +3,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BinarySerializer.Audio;
-using BinarySerializer.GBA.Audio.GAX;
+using BinarySerializer.Audio.GBA.GAX;
 
 namespace gaxm
 {
     public class GAX_XMWriter {
 
-        private readonly Context.ConsoleLog Debug = Settings.Verbose ? new Context.ConsoleLog() : null;
+        private readonly Context.ConsoleLogger Debug = Settings.Verbose ? new Context.ConsoleLogger() : null;
 
         public XM ConvertToXM(IGAX_Song song) {
             XM xm = new XM();
-            Debug?.Log($"Exporting song: {song.Info.ParsedName}");
+            Debug?.LogInfo($"Exporting song: {song.Info.ParsedName}");
             xm.ModuleName = song.Info.ParsedName;
             xm.Instruments = song.Info.UsedInstrumentIndices.Select((s,i) => GetInstrument(song,i)).ToArray();
             xm.NumInstruments = (ushort)xm.Instruments.Length;
@@ -116,7 +116,7 @@ namespace gaxm
                 instrPitch - 1 // GAX notes start at 1
                 + (gax_instr.Rows[0].DontUseNotePitch ? 0 : (relNote - 2));
 
-            Debug?.Log($"(Instrument {ind}) Sample:{gax_instr.SampleIndices[gax_sampleIndex]}" +
+            Debug?.LogInfo($"(Instrument {ind}) Sample:{gax_instr.SampleIndices[gax_sampleIndex]}" +
                 $" - Pitch:{gax_smp.Pitch}" +
                 $" - Relative Note Number:{relativeNoteNumber}" +
                 $" - Cfg1:{gax_instrRow.DontUseNotePitch}" +
@@ -248,7 +248,7 @@ namespace gaxm
                 }
             }
             // pat.PackedPatternDataSize = (ushort)(song.NumChannels * song.NumRowsPerPattern);
-            pat.PackedPatternDataSize = (ushort)pat.PatternRows.Sum(p => p.Size);
+            pat.PackedPatternDataSize = (ushort)pat.PatternRows.Sum(p => p.SerializedSize);
 
             return pat;
         }
@@ -298,7 +298,7 @@ namespace gaxm
                             var param = (param1 + param2) / 2;
                             eff = 15;
                             effParam = (byte)param;
-                            Debug?.Log($"{row.Offset}: Effect {row.Effect} was used, incorrect speed!");
+                            Debug?.LogInfo($"{row.Offset}: Effect {row.Effect} was used, incorrect speed!");
                             break;
                         case GAX_PatternRow.EffectType.VolumeSlideUp:
                         case GAX_PatternRow.EffectType.VolumeSlideDown:

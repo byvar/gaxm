@@ -1,5 +1,5 @@
 ﻿using BinarySerializer;
-using BinarySerializer.GBA.Audio.GAX;
+using BinarySerializer.Audio.GBA.GAX;
 using CommandLine;
 using Konsole;
 using System;
@@ -55,7 +55,7 @@ namespace gaxm {
 
             int gaxVersion = 3;
             GAX_Settings gaxSettings = null;
-            Context.ConsoleLog logger = new Context.ConsoleLog();
+            Context.ConsoleLogger logger = new Context.ConsoleLogger();
             List<IGAX_Song> songs = new List<IGAX_Song>();
 
             using (Context context = new Context(basePath, log: false, verbose: false)) {
@@ -106,7 +106,7 @@ namespace gaxm {
                         using (Context context = new Context(basePath, log: Settings.Log, verbose: true)) {
                             context.SetGAXSettings(gaxSettings);
                             Directory.CreateDirectory(Settings.LogDirectory);
-                            ((Context.SerializerLog)context.Log).OverrideLogPath = Path.Combine(Settings.LogDirectory, $"{song.Info.ParsedName}.txt");
+                            ((Context.SimpleSerializerLogger)context.SerializerLogger).OverrideLogPath = Path.Combine(Settings.LogDirectory, $"{song.Info.ParsedName}.txt");
                             context.AddFile(new MemoryMappedFile(context, filename, 0x08000000, Endian.Little));
                             var basePtr = context.FilePointer(filename);
                             var s = context.Deserializer;
@@ -148,7 +148,7 @@ namespace gaxm {
             }
         }
 
-        private static void FastScan(SerializerObject s, Dictionary<Pointer, List<int>> pointers, Context.ConsoleLog logger, List<IGAX_Song> songs) {
+        private static void FastScan(SerializerObject s, Dictionary<Pointer, List<int>> pointers, Context.ConsoleLogger logger, List<IGAX_Song> songs) {
             ProgressBar ProgressBarGaxScan = new ProgressBar(progressSize, progressTextWidth);
             Console.WriteLine();
 
@@ -177,7 +177,7 @@ namespace gaxm {
                         if (Song.Info.Name.Length <= 4 || !Song.Info.Name.Contains("\" © ")) {
                             throw new Exception($"{Song.Offset}: Incorrect name: {Song.Info.Name}");
                         }
-                        logger.Log($"{Song.Offset}: {Song.Info.ParsedName} - {Song.Info.ParsedArtist}");
+                        logger.LogInfo($"{Song.Offset}: {Song.Info.ParsedName} - {Song.Info.ParsedArtist}");
                         songs.Add(Song);
                     } catch {
                     }
@@ -192,7 +192,7 @@ namespace gaxm {
             Console.WriteLine();
         }
 
-        private static void FastScan_FindUnused(SerializerObject s, Dictionary<Pointer, List<int>> pointers, Context.ConsoleLog logger, List<IGAX_Song> songs, Pointer instrumentSetPointer, Pointer basePtr) {
+        private static void FastScan_FindUnused(SerializerObject s, Dictionary<Pointer, List<int>> pointers, Context.ConsoleLogger logger, List<IGAX_Song> songs, Pointer instrumentSetPointer, Pointer basePtr) {
             ProgressBar ProgressBarGaxScan = new ProgressBar(progressSize, progressTextWidth);
             Console.WriteLine();
 
@@ -228,7 +228,7 @@ namespace gaxm {
                                         if (Song.Info.Name.Length <= 4 || !Song.Info.Name.Contains("\" © ")) {
                                             throw new Exception($"{Song.Offset}: Incorrect name: {Song.Info.Name}");
                                         }
-                                        logger.Log($"{Song.Offset}: {Song.Info.ParsedName} - {Song.Info.ParsedArtist}");
+                                        logger.LogInfo($"{Song.Offset}: {Song.Info.ParsedName} - {Song.Info.ParsedArtist}");
                                         songs.Add(Song);
                                     } catch {
                                     }
@@ -248,7 +248,7 @@ namespace gaxm {
                                 if (Song.Info.Name.Length <= 4 || !Song.Info.Name.Contains("\" © ")) {
                                     throw new Exception($"{Song.Offset}: Incorrect name: {Song.Info.Name}");
                                 }
-                                logger.Log($"{Song.Offset}: {Song.Info.ParsedName} - {Song.Info.ParsedArtist}");
+                                logger.LogInfo($"{Song.Offset}: {Song.Info.ParsedName} - {Song.Info.ParsedArtist}");
                                 songs.Add(Song);
                             } catch {
                             }
@@ -292,7 +292,7 @@ namespace gaxm {
             return pointers;
         }
 
-        private static int? FindVersion(SerializerObject s, Dictionary<Pointer, List<int>> pointers, ILogger logger, GAX_Settings gaxSettings)
+        private static int? FindVersion(SerializerObject s, Dictionary<Pointer, List<int>> pointers, ISystemLogger logger, GAX_Settings gaxSettings)
         {
             ProgressBar progressBarVersionScan = new ProgressBar(progressSize, progressTextWidth);
             Console.WriteLine();
@@ -317,15 +317,15 @@ namespace gaxm {
                 if (success)
                 {
                     int gaxVersion = gaxSettings.MajorVersion;
-                    logger.Log($"{p}:");
-                    logger.Log(gaxSettings.FullVersionString);
-                    logger.Log($"Parsed GAX version: {gaxVersion}");
+                    logger.LogInfo($"{p}:");
+                    logger.LogInfo(gaxSettings.FullVersionString);
+                    logger.LogInfo($"Parsed GAX version: {gaxVersion}");
                     Console.WriteLine();
                     return gaxVersion;
                 }
             }
 
-            logger.Log($"GAX version string not found. Assuming GAX version {gaxSettings.MajorVersion}");
+            logger.LogInfo($"GAX version string not found. Assuming GAX version {gaxSettings.MajorVersion}");
             Console.WriteLine();
 
             return null;

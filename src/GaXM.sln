@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30611.23
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33424.131
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GaXM", "GaXM.csproj", "{79D37E9D-E47E-4CC4-8396-944CD07104B9}"
 EndProject
@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinarySerializer", "..\subm
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinarySerializer.Audio", "..\submodules\BinarySerializer.Audio\src\BinarySerializer.Audio.csproj", "{6AC224E6-C73D-4E99-ADC3-B33A94003F73}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinarySerializer.GBA.Audio", "..\submodules\BinarySerializer.GBA.Audio\src\BinarySerializer.GBA.Audio.csproj", "{38ADE4A0-BC27-4608-BD59-4EFE831CECDA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinarySerializer.Audio.GBA", "..\submodules\BinarySerializer.Audio.GBA\src\BinarySerializer.Audio.GBA.csproj", "{69FD875F-A083-4F76-A347-BF1CBA1DC34A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,10 +29,10 @@ Global
 		{6AC224E6-C73D-4E99-ADC3-B33A94003F73}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6AC224E6-C73D-4E99-ADC3-B33A94003F73}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6AC224E6-C73D-4E99-ADC3-B33A94003F73}.Release|Any CPU.Build.0 = Release|Any CPU
-		{38ADE4A0-BC27-4608-BD59-4EFE831CECDA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{38ADE4A0-BC27-4608-BD59-4EFE831CECDA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{38ADE4A0-BC27-4608-BD59-4EFE831CECDA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{38ADE4A0-BC27-4608-BD59-4EFE831CECDA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{69FD875F-A083-4F76-A347-BF1CBA1DC34A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{69FD875F-A083-4F76-A347-BF1CBA1DC34A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{69FD875F-A083-4F76-A347-BF1CBA1DC34A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{69FD875F-A083-4F76-A347-BF1CBA1DC34A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
